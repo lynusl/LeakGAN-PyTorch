@@ -12,8 +12,9 @@ def text_to_tensor(filePath):
     corpus = []
     for l in lines:
         l = list(l.upper().strip()) #strip removes blank spaces from both sides
-        if len(l) <= 50:
-            corpus.append(l)
+        corpus.append(l)
+        for i in range(len(l), 50):
+            corpus.append(" ")
     """
     Get all words used in text
     """
@@ -25,7 +26,7 @@ def text_to_tensor(filePath):
     #     if vocab[i] == "<R>":
     #         break
     # del vocab[i]
-    vocab.append("<R>") #we only need one <R> not several
+    # vocab.append("<R>") #we only need one <R> not several
 
     print(vocab)
 
