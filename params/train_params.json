@@ -8,9 +8,9 @@
     "replace_num":5,
     "pre_dis_epoch_num":50,
     "pre_gen_epoch_num":80,
-    "pos_filepath":"./data/train_corpus.npy",
-    "neg_filepath":"./data/gen_data.npy",
-    "eval_filepath":"./data/eval_data.npy",
+    "pos_filepath":"./newdata/corpus.npy",
+    "neg_filepath":"./newdata/gen_corpus.npy",
+    "eval_filepath":"./newdata/eval_corpus.npy",
     "model_path":"./ckpts/",
     "seed":233,
     "checkpoint_path":null

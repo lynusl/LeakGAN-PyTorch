@@ -1,5 +1,5 @@
 {
-    "filepath":"./data/train_corpus.npy",
+    "filepath":"./newdata/corpus.npy",
     "batch_size":64,
     "shuffle":true,
     "num_workers":4,

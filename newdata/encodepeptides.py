@@ -11,8 +11,8 @@ def text_to_tensor(filePath):
     f.close()
     corpus = []
     for l in lines:
-        l = l.upper().strip().split(' ') #strip removes blank spaces from both sides
-        if len(l) < 50:
+        l = list(l.upper().strip()) #strip removes blank spaces from both sides
+        if len(l) <= 50:
             corpus.append(l)
     """
     Get all words used in text
@@ -21,11 +21,13 @@ def text_to_tensor(filePath):
     for p in corpus:
         vocab.extend(p) #save all into a single list
     vocab = list(set(vocab)) #save only unique characters
-    for i in range(len(vocab)):
-        if vocab[i] == "<R>":
-            break
-    del vocab[i]
+    # for i in range(len(vocab)):
+    #     if vocab[i] == "<R>":
+    #         break
+    # del vocab[i]
     vocab.append("<R>") #we only need one <R> not several
+
+    print(vocab)
 
     """
     Encode text into a LongTensor
@@ -33,13 +35,13 @@ def text_to_tensor(filePath):
     corpus_num = []
     for p in corpus:
         corpus_num.append(list(map(lambda x: vocab.index(x) + 1, p)))
-    corpus_data = np.array(corpus_data)
+    corpus_data = np.array(corpus_num, dtype=object)
 
     """
     Save preprocessed file
     """
-    np.save("corpus", corpus_data) #save the training corpus data, where words are represented as numbers(their index in vocab array)
-    f = open("chars.pkl", "wb") #this is in a sense table of keys
+    np.save("newdata/corpus", corpus_data) #save the training corpus data, where words are represented as numbers(their index in vocab array)
+    f = open("newdata/chars.pkl", "wb") #this is in a sense table of keys
     pickle.dump(vocab, f)
 
 
@@ -56,3 +58,5 @@ def tensor_to_text(input_x, vocab):
     poem_ = reduce((lambda x, y:x + y), poem) # just add strings
     print(poem_) #to see
     return poem_
+
+text_to_tensor("newdata/active.txt")
