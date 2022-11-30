@@ -4,7 +4,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import xgboost as xgb
+from data_iter import real_data_loader, dis_data_loader
+from functools import reduce
+from rdkit.Chem import MolFromSequence, RDKFingerprint
+from rdkit.DataStructs import FingerprintSimilarity
 
 def init_vars(generator, discriminator, use_cuda=False):
     h_w_t, c_w_t = generator.init_hidden() #worker unit of gen
@@ -23,18 +27,62 @@ def init_vars(generator, discriminator, use_cuda=False):
     else:
         vs = variables_
     return vs
-def score_class():
+
+def get_params(filePath):
+    with open(filePath, 'r') as f:
+        params = json.load(f)
+    f.close()
+    return params
+def tensor_to_text(input_x, vocab):
+    #vocab will convert some integer into a word
+    poem = []
+    sen_len = 50
+    for index, x in enumerate(input_x):
+        if index != 0:
+            if index % sen_len == 0:
+                poem.append("\n")
+        poem.append(vocab[x-1]) #x-1 because when encoding we added one
+    poem_ = ""
+    poem_ = reduce((lambda x, y:x + y), poem) # just add strings
+    #print(poem_) #to see
+    return poem_    
+def score_class(model):
+    gen = np.load("data/gen_corpus.npy")
+    #dis_data_params = get_params("./params/dis_data_params.json") 
+    #print(dis_dataloader_params)
+    #dataloader = dis_data_loader(**dis_data_params) #this is where data iterator is used
+    maxlen = 50
+    aalist = list("VINGTCYLE AMWPHRQSFDK")
+    seqList =[]
+    fpLst = []
+    for i in gen:
+        seqList.append(tensor_to_text(seqList,aalist))
+    for seq in seqList:
+        mol = MolFromSequence(seq)
+        # ignore the sequence if it cannot be parsed properly by rdkit
+        if mol is not None:
+            fpLst.append([seq, RDKFingerprint(mol)])
+    predList = []
+    for seq in fpLst:
+        predList.append(model.pred(seq[1]))
+    return predList
     # 1. Load generated samples
     # 2. Fingerprint generated samples
     # 3. Load XGboost model
     # 4. get score of amp via xgboost
     # 5. return scaled score as loss
 
+
+    
+
     loss = 0.5
 
 
     return loss
-    
+def loadModel():
+    xgb1 = xgb.Booster()
+    xgb1.load_model("judge.model")
+    return xgb1
 def recurrent_func(f_type = "pre"):
     """
     There are 3 types of recurrent function:
@@ -157,7 +205,7 @@ def recurrent_func(f_type = "pre"):
             goal_out_size = generator.worker.goal_out_size
             vocab_size = discriminator.vocab_size
             """
-            Perform forward step for adversarial training for discriminator and generator
+            Perform forward step for adversarial training for generator and not discriminator
             """
             while t < seq_len + 1:
                 #Extract Feature from D
@@ -342,6 +390,7 @@ def get_rewards(model_dict, input_x, rollout_num, use_cuda=False, temperature=1.
     #Prepare constants
     seq_len = discriminator.seq_len
     step_size = generator.step_size
+    xbg1 = loadModel()
     #Perform rollout and calculate reward
     rewards = []
     rollout_func = recurrent_func("rollout")
@@ -357,15 +406,37 @@ def get_rewards(model_dict, input_x, rollout_num, use_cuda=False, temperature=1.
                 pred = pred.cpu()
             pred = pred.numpy()
             pred = pred.reshape(-1)
+            selList = score_class(xbg1)
+            gamma = 0.5
+            pred = gamma*np.array(pred) + (1.0-gamma)*np.array(selList)
             if i == 0:
                 rewards.append(pred)
             else:
                 rewards[int(given_num/step_size -1)] += pred
             given_num += step_size
+        ##here  ????????? todo: figure out what this means
+        """
+        sel_list = score_class(xbg1,input_x)
+
+        sample_for_reward = rollout_func(model_dict, input_x, given_num, use_cuda, temperature)
+        pred = discriminator(sample_for_reward)["pred"]
+        pred = pred[:, 1].data
+        if use_cuda:
+            pred = pred.cpu()
+        pred = pred.numpy()
+        pred = pred.reshape(-1)
+        if i == 0:
+            rewards.append(pred)
+        else:
+            rewards[int(given_num/step_size -1)] += pred
+        """
+           
+
     rewards = rescale(rewards, delta) / rollout_num
     if use_cuda:
         rewards = rewards.cuda(non_blocking=True)
     discriminator = discriminator.train()
+
     return rewards
 def rescale(rewards, delta=16.0):
     """

@@ -15,7 +15,7 @@ eval = np.load("data/eval_corpus.npy")
 
 
 # print(corpus.shape, gen.shape, train.shape, test.shape, eval.shape)
-# print(gen)
+print(gen)
 # print(train)
 # print(test)
 # print(eval)
