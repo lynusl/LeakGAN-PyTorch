@@ -23,7 +23,18 @@ def init_vars(generator, discriminator, use_cuda=False):
     else:
         vs = variables_
     return vs
+def score_class():
+    # 1. Load generated samples
+    # 2. Fingerprint generated samples
+    # 3. Load XGboost model
+    # 4. get score of amp via xgboost
+    # 5. return scaled score as loss
 
+    loss = 0.5
+
+
+    return loss
+    
 def recurrent_func(f_type = "pre"):
     """
     There are 3 types of recurrent function:
@@ -422,6 +433,7 @@ def loss_func(f_type="pre_worker"):
             #print("Pred after reshape: {}".format(prediction.size()))
             #print("One Hot after reshape: {}".format(hot_one.size()))
             loss = -torch.mean(one_hot(real_data, vocab_size, use_cuda) * torch.log(prediction))
+        
             return loss
         return func
     elif f_type == "pre_manager":
