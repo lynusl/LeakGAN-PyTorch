@@ -3,9 +3,9 @@
         "seq_len":50,
         "num_classes":2,
         "vocab_size":21,
-        "dis_emb_dim":64,
-        "filter_sizes":[1,2,3,4,5,6,7,8,9,10,15,20],
-        "num_filters":[100,200,200,200,200,100,100,100,100,100,160,160],
+        "dis_emb_dim":8,
+        "filter_sizes":[1,5,10,20,50],
+        "num_filters":[50,5,5,10,20],
         "start_token":0,
         "goal_out_size":null,
         "step_size":5,
@@ -14,15 +14,15 @@
     },
     "generator_params":{
         "manager_params":{
-            "batch_size":64,
-            "hidden_dim":32,
+            "batch_size":16,
+            "hidden_dim":8,
             "goal_out_size":null
         },
         "worker_params":{
-            "batch_size":64,
+            "batch_size":16,
             "vocab_size":21,
-            "embed_dim":32,
-            "hidden_dim":32,
+            "embed_dim":8,
+            "hidden_dim":8,
             "goal_out_size":null,
             "goal_size":16
         },

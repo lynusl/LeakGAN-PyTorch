@@ -1,7 +1,7 @@
 {
 	"positive_filepath":"./newdata/corpus.npy",
 	"negative_filepath":"./newdata/gen_corpus.npy",
-    "batch_size":64,
+    "batch_size":16,
     "shuffle":true,
     "num_workers":4,
     "pin_memory":false

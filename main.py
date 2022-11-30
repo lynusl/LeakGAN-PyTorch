@@ -79,9 +79,9 @@ g_w_goal_size = 16
 
 g_step_size = 5
 # Discriminator Parameters
-d_seq_len = 20
+d_seq_len = 50
 d_num_classes = 2
-d_vocab_size = 5258
+d_vocab_size = 21
 d_dis_emb_dim = 64
 d_filter_sizes = [1,2,3,4,5,6,7,8,9,10,15,20],
 d_num_filters = [100,200,200,200,200,100,100,100,100,100,160,160],
@@ -187,39 +187,50 @@ def pretrain_generator(model_dict, optimizer_dict, scheduler_dict, dataloader, v
     
     for i, sample in enumerate(dataloader):
         #print("DataLoader: {}".format(dataloader))
-        m_lr_scheduler.step()
-        w_lr_scheduler.step()
 
         sample = Variable(sample)
         if use_cuda:
             sample = sample.cuda(non_blocking=True)
         
         # Calculate pretrain loss
-        if (sample.size() == torch.zeros([64, 20]).size()): #sometimes smaller than 64 (16) is passed, so this if statement disables it
+        if (sample.size() == torch.zeros([16, 50]).size()): #sometimes smaller than 64 (16) is passed, so this if statement disables it
             #print("Sample size: {}".format(sample.size()))
+
             pre_rets = recurrent_func("pre")(model_dict, sample, use_cuda)
             real_goal = pre_rets["real_goal"]
             prediction = pre_rets["prediction"]
             delta_feature = pre_rets["delta_feature"]
 
             m_loss = loss_func("pre_manager")(real_goal, delta_feature)
-            torch.autograd.grad(m_loss, manager.parameters())
+            #torch.autograd.grad(m_loss, manager.parameters(), create_graph=True)
+            m_loss.backward(retain_graph=True)
+
+            w_loss = loss_func("pre_worker")(sample, prediction, vocab_size, use_cuda)
+            #torch.autograd.grad(w_loss, worker.parameters(), create_graph=True)
+            w_loss.backward()
+
+
             clip_grad_norm_(manager.parameters(), max_norm=max_norm)
             m_optimizer.step()
-            m_optimizer.zero_grad()
-            
-            w_loss = loss_func("pre_worker")(sample, prediction, vocab_size, use_cuda)
-            torch.autograd.grad(w_loss, worker.parameters())
+
             clip_grad_norm_(worker.parameters(), max_norm=max_norm)
             w_optimizer.step()
+            
+            m_optimizer.zero_grad()
             w_optimizer.zero_grad()
-            if i == 63:
-                print("Pre-Manager Loss: {:.5f}, Pre-Worker Loss: {:.5f}\n".format(m_loss, w_loss))
+
+            if i % 50 == 0:
+                print("Pre-Manager Loss: {:.5f}, Pre-Worker Loss: {:.5f}".format(m_loss, w_loss))
+        
+            m_lr_scheduler.step()
+            w_lr_scheduler.step()
+
+            
     """
     Update model_dict, optimizer_dict, and scheduler_dict
     """
 
-    generator.woroker = worker
+    generator.worker = worker
     generator.manager = manager
     model_dict["generator"] = generator
 
@@ -270,10 +281,10 @@ def pretrain_discriminator(model_dict, optimizer_dict, scheduler_dict,
                 label = label.cuda()
             outs = discriminator(data)
             loss = cross_entropy(outs["score"], label.view(-1)) + discriminator.l2_loss()
-            d_lr_scheduler.step()
             loss.backward()
             d_optimizer.step()
-            if i == 63:
+            d_lr_scheduler.step()
+            if i % 50 == 0:
                 print("Pre-Discriminator loss: {:.5f}".format(loss))
     
     model_dict["discriminator"] = discriminator
@@ -284,7 +295,7 @@ def pretrain_discriminator(model_dict, optimizer_dict, scheduler_dict,
 #Adversarial training 
 def adversarial_train(model_dict, optimizer_dict, scheduler_dict, dis_dataloader_params,
                       vocab_size, pos_file, neg_file, batch_size, gen_train_num=1,
-                      dis_train_epoch=5, dis_train_num=3, max_norm=5.0,
+                      dis_train_epoch=3, dis_train_num=3, max_norm=5.0,
                       rollout_num=4, use_cuda=False, temperature=1.0, epoch=1, tot_epoch=100):
     """
         Get all the models, optimizer and schedulers
@@ -308,8 +319,6 @@ def adversarial_train(model_dict, optimizer_dict, scheduler_dict, dis_dataloader
 
     #Adversarial training for generator
     for _ in range(gen_train_num):
-        m_lr_scheduler.step()
-        w_lr_scheduler.step()
 
         m_optimizer.zero_grad()
         w_optimizer.zero_grad()
@@ -327,13 +336,21 @@ def adversarial_train(model_dict, optimizer_dict, scheduler_dict, dis_dataloader
         m_loss = loss_func("adv_manager")(rewards, real_goal, delta_feature)
         w_loss = loss_func("adv_worker")(all_goal, delta_feature_for_worker, gen_token, prediction, vocab_size, use_cuda)
 
-        torch.autograd.grad(m_loss, manager.parameters()) #based on loss improve the parameters
-        torch.autograd.grad(w_loss, worker.parameters())
+        #torch.autograd.grad(m_loss, manager.parameters()) #based on loss improve the parameters
+        #torch.autograd.grad(w_loss, worker.parameters())
+        m_loss.backward(retain_graph=True)
+        w_loss.backward()
+
+
         clip_grad_norm_(manager.parameters(), max_norm)
-        clip_grad_norm_(worker.parameters(), max_norm)
         m_optimizer.step()
+
+        clip_grad_norm_(worker.parameters(), max_norm)
         w_optimizer.step()
         print("Adv-Manager loss: {:.5f} Adv-Worker loss: {:.5f}".format(m_loss, w_loss))
+
+        m_lr_scheduler.step()
+        w_lr_scheduler.step()
     
     del adv_rets
     del real_goal
@@ -371,9 +388,10 @@ def adversarial_train(model_dict, optimizer_dict, scheduler_dict, dis_dataloader
                 outs = discriminator(data)
                 loss = cross_entropy(outs["score"], label.view(-1)) + discriminator.l2_loss()
                 d_optimizer.zero_grad()
-                d_lr_scheduler.step()
                 loss.backward()
                 d_optimizer.step()
+                d_lr_scheduler.step()
+
         print("{}/{} Adv-Discriminator Loss: {:.5f}".format(n, range(dis_train_epoch),loss))
     #Save all changes
     model_dict["discriminator"] = discriminator

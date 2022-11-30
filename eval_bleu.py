@@ -1,7 +1,7 @@
 import nltk
 import random
 from scipy import stats
-import cPickle
+import pickle as cPickle
 
 data_name = "cotra"
 vocab_file = "vocab_" + data_name + ".pkl"
