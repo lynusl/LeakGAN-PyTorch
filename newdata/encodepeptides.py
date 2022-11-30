@@ -1,6 +1,7 @@
 from functools import reduce
 import numpy as np
 import pickle
+import torch
 
 def text_to_tensor(filePath):
     """
@@ -12,9 +13,10 @@ def text_to_tensor(filePath):
     corpus = []
     for l in lines:
         l = list(l.upper().strip()) #strip removes blank spaces from both sides
-        corpus.append(l)
         for i in range(len(l), 50):
-            corpus.append(" ")
+            l.append(" ")
+        corpus.append(l)
+
     """
     Get all words used in text
     """
@@ -36,7 +38,7 @@ def text_to_tensor(filePath):
     corpus_num = []
     for p in corpus:
         corpus_num.append(list(map(lambda x: vocab.index(x) + 1, p)))
-    corpus_data = np.array(corpus_num, dtype=object)
+    corpus_data = np.array(corpus_num)
 
     """
     Save preprocessed file
@@ -61,3 +63,4 @@ def tensor_to_text(input_x, vocab):
     return poem_
 
 text_to_tensor("newdata/active.txt")
+torch.cuda.empy_cache()
