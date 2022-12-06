@@ -57,39 +57,6 @@ parser.add_argument("--no_cuda", action="store_true", default=False,
 parser.add_argument("--seed", type=int, default=1, metavar="S",
                     help="Random seed (defaul: 1)")
 
-#Files
-POSITIVE_FILE = "real.data"
-NEGATIVE_FILE = "gene.data"
-
-# Genrator Parameters
-g_embed_dim = 32
-g_hidden_dim = 32
-g_seq_len = 20
-#   MANAGER:
-g_m_batch_size = 64
-g_m_hidden_dim = 32
-g_m_goal_out_size = 0
-#   WORKER:
-g_w_batch_size = 64
-g_w_vocab_size = 5258
-g_w_embed_dim = 32
-g_w_hidden_dim = 32
-g_w_goal_out_size = 0
-g_w_goal_size = 16
-
-g_step_size = 5
-# Discriminator Parameters
-d_seq_len = 50
-d_num_classes = 2
-d_vocab_size = 21
-d_dis_emb_dim = 64
-d_filter_sizes = [1,2,3,4,5,6,7,8,9,10,15,20],
-d_num_filters = [100,200,200,200,200,100,100,100,100,100,160,160],
-d_start_token = 0
-d_goal_out_size = 0
-d_step_size = 5
-d_dropout_prob = 0.2
-d_l2_reg_lambda = 0.2
 
 def get_params(filePath):
     with open(filePath, 'r') as f:

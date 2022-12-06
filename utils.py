@@ -341,6 +341,7 @@ def get_rewards(model_dict, input_x, rollout_num, use_cuda=False, temperature=1.
         while given_num < seq_len:
             sample_for_reward = rollout_func(model_dict, input_x, given_num, use_cuda, temperature)
             pred = discriminator(sample_for_reward)["pred"]
+            # TODO run xgboost on sample_for_reward and then sum
             pred = pred[:, 1].data
             if use_cuda:
                 pred = pred.cpu()
@@ -351,9 +352,10 @@ def get_rewards(model_dict, input_x, rollout_num, use_cuda=False, temperature=1.
             else:
                 rewards[int(given_num/step_size -1)] += pred
             given_num += step_size
+        #TODO sum here also    
     rewards = rescale(rewards, delta) / rollout_num
     if use_cuda:
-        rewards = rewards.cuda(non_blocking=True)
+        rewards = rewards.cuda(non_blocking=True)   
     discriminator = discriminator.train()
     return rewards
 def rescale(rewards, delta=16.0):
@@ -431,14 +433,18 @@ def loss_func(f_type="pre_worker"):
         return func
     elif f_type == "adv_worker":
         def func(all_goal, delta_feature_for_worker, gen_token, prediction, vocab_size, use_cuda=False):
-            intrinsic_rewards = 1.0 - F.cosine_similarity(all_goal, delta_feature_for_worker, dim=2)
+            intrinsic_rewards = 1.0 - F.cosine_similarity(all_goal, delta_feature_for_worker, dim=2) 
+            #lynus: why did they use 1.0 - here and then negate the loss below when the og paper just used cosine similarity
             prediction = torch.clamp(prediction, 1e-20, 1.0)
             loss = -torch.mean(intrinsic_rewards * torch.sum(one_hot(gen_token, vocab_size, use_cuda)* torch.log(prediction), dim=2))
+            #lynus: also this is entirely FeUdal (worker is trained only on intrinsic rewards with no exposure to the environment)
             return loss
         return func
     elif f_type == "adv_manager":
         def func(rewards, real_goal, delta_feature):
+            #lynus: why did they use 1.0 - and then negate the loss when the og paper just used cosine similarity
             loss = -torch.mean(rewards*(1.0 - F.cosine_similarity(delta_feature, real_goal, dim=2)))
+
             return loss
         return func
     elif f_type == "dis":
