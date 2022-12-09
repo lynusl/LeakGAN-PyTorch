@@ -77,6 +77,11 @@ class Worker(nn.Module):
             h_w_t = last output of LSTM in Worker
             c_w_t = last cell state of LSTM in Worker
         """
+
+        # print("H_w size: {}".format(h_w_t.size()))
+        # print("C_w size: {}".format(c_w_t.size()))
+        # print("x_t size: {}".format(x_t.size()))
+
         x_t_emb = self.emb(x_t)
         h_w_tp1, c_w_tp1 = self.recurrent_unit(x_t_emb, (h_w_t, c_w_t))
         output_tp1 = self.fc(h_w_tp1)
